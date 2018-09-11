@@ -1,7 +1,10 @@
 package com.Bag.services.food;
 
+import com.Bag.engine.challenge.CaloriesGenerator;
 import com.Bag.models.BagUser;
 import com.Bag.models.BagUserRepository;
+import com.Bag.models.food.Food;
+import com.Bag.models.food.Meal;
 import com.Bag.models.food.Serving;
 import com.Bag.request.OneDayRequest;
 import com.Bag.request.RequestValidator;
@@ -10,10 +13,13 @@ import com.Bag.request.food.ServingRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class FoodServiceImpl implements FoodService {
@@ -81,6 +87,35 @@ public class FoodServiceImpl implements FoodService {
         //save the user
         bagUserRepository.save(bagUser);
     }
+
+    @Override
+    public Object getOneDayEatenCalories(HeaderRequest request, OneDayRequest oneDayRequest) throws Exception {
+        requestValidator.validate(request);
+        requestValidator.validate(oneDayRequest);
+
+        Food food = bagUserRepository.findByUsername(request.getUsername()).getFood();
+        Meal meal = food.getMeal().getOrDefault(oneDayRequest.getDate(), null);
+        BigDecimal calories = new BigDecimal(0);
+        for (Serving servings: meal.getServings()) {
+           calories = calories.add(servings.getCalories());
+        }
+        Map<String, BigDecimal> caloriesMap = new HashMap<>();
+        caloriesMap.put("quantity", calories);
+        caloriesMap.put("caloriesGoal", food.getCaloriesGoal());
+        caloriesMap.put("progress", calories.divide(food.getCaloriesGoal()));
+        return caloriesMap;
+
+    }
+
+    @Override
+    public void setCaloriesGoal(HeaderRequest request) throws Exception {
+        requestValidator.validate(request);
+
+        BagUser bagUser = bagUserRepository.findByUsername(request.getUsername());
+        bagUser.getFood().setCaloriesGoal((BigDecimal) (new CaloriesGenerator()).generate(new Object()));
+        bagUserRepository.save(bagUser);
+    }
+
 
     String getDateAsString(){
         DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");

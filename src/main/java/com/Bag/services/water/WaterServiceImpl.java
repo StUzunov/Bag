@@ -5,11 +5,13 @@ import com.Bag.models.BagUser;
 import com.Bag.models.BagUserRepository;
 import com.Bag.models.water.DayWater;
 import com.Bag.request.HeaderRequest;
+import com.Bag.request.OneDayRequest;
 import com.Bag.request.RequestValidator;
 import com.Bag.request.water.UpdateDailyWaterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -48,6 +50,17 @@ public class WaterServiceImpl implements WaterService{
         bagUser.getWater().getDayWaterMap().get(getDateAsString()).setQuantity(updateDailyWaterRequest.getQuantity());
 
         bagUserRepository.save(bagUser);
+    }
+
+    @Override
+    public Object getOneDayWater(HeaderRequest request, OneDayRequest oneDayRequest) throws Exception {
+        requestValidator.validate(request);
+        requestValidator.validate(oneDayRequest);
+
+        DayWater dayWater = bagUserRepository.findByUsername(request.getUsername()).getWater().getDayWaterMap().getOrDefault(oneDayRequest.getDate(), null);
+        dayWater.setProgress(BigDecimal.valueOf(dayWater.getQuantity()).divide(BigDecimal.valueOf(dayWater.getQuantityGoal())));
+
+        return dayWater;
     }
 
     String getDateAsString(){
